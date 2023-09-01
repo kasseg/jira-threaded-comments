@@ -1,3 +1,43 @@
+document.addEventListener('DOMContentLoaded', function (event) {
+  AJS.$("document").ready(function () {
+    debug("doc ready");
+    //Needed only once
+    AJS.$(document).on("click", ".commentreply", replyClick);
+    AJS.$(document).on("click", ".replycommentbutton", function () {
+      formSubmit(AJS.$(this));
+    });
+    AJS.$(document).on("click", ".replycommentcancel", cancelHandle);
+    AJS.$(document).on("click", ".upvote", upVote);
+    AJS.$(document).on("click", ".downvote", downVote);
+
+    JIRA.ViewIssueTabs.onTabReady(function (in1, in2, in3) {
+      if (
+          "activitymodule" == in1.attr("id") ||
+          "activitymodule" == in1.parent().attr("id")
+      ) {
+        debug("Tab ready");
+        doAll();
+      }
+    });
+  });
+
+  AJS.toInit(function () {
+    JIRA.bind(JIRA.Events.NEW_CONTENT_ADDED, function (e, context, reason) {
+      if (
+          reason === JIRA.CONTENT_ADDED_REASON.panelRefreshed &&
+          context.is("#activitymodule")
+      ) {
+        handleIssueUpdated(e, context, reason);
+      }
+    });
+
+    if (typeof GH != "undefined" && typeof GH.DetailsView != "undefined") {
+      JIRA.bind("issueUpdated", handleIssueUpdated);
+      JIRA.bind(GH.DetailsView.API_EVENT_DETAIL_VIEW_UPDATED, handleIssueUpdated);
+    }
+  });
+});
+
 var issueKey;
 var loggedInUser;
 var issueID;
@@ -53,59 +93,38 @@ var doAll = function () {
   //    lastUpdatedTime = tm();
 
   AJS.$.getJSON(
-    AJS.contextPath() + "/rest/api/latest/mypermissions?issueId=" + issueID,
-    function (data) {
-      if (data.permissions.ADD_COMMENTS.havePermission) {
-        AJS.$.getJSON(
-          AJS.contextPath() + "/rest/api/latest/issue/" + issueKey,
-          function (data) {
-            projectKey = data.fields.project.key;
-            debug(
-              "threaded comments context - " +
-                issueKey +
-                "," +
-                issueID +
-                "," +
-                loggedInUser
-            );
+      AJS.contextPath() + "/rest/api/latest/mypermissions?issueId=" + issueID,
+      function (data) {
+        if (data.permissions.ADD_COMMENTS.havePermission) {
+          AJS.$.getJSON(
+              AJS.contextPath() + "/rest/api/latest/issue/" + issueKey,
+              function (data) {
+                projectKey = data.fields.project.key;
+                debug(
+                    "threaded comments context - " +
+                    issueKey +
+                    "," +
+                    issueID +
+                    "," +
+                    loggedInUser
+                );
 
-            addCommentButtons();
-            rearrangeComments();
-            showCurrentVotes();
-            intialized = true;
-          }
-        );
-      } else {
-        debug("Rearrange/show");
-        rearrangeComments();
-        showCurrentVotes();
-        intialized = true;
+                addCommentButtons();
+                rearrangeComments();
+                showCurrentVotes();
+                intialized = true;
+              }
+          );
+        } else {
+          debug("Rearrange/show");
+          rearrangeComments();
+          showCurrentVotes();
+          intialized = true;
+        }
       }
-    }
   );
 };
 
-AJS.$("document").ready(function () {
-  debug("doc ready");
-  //Needed only once
-  AJS.$(document).on("click", ".commentreply", replyClick);
-  AJS.$(document).on("click", ".replycommentbutton", function () {
-    formSubmit(AJS.$(this));
-  });
-  AJS.$(document).on("click", ".replycommentcancel", cancelHandle);
-  AJS.$(document).on("click", ".upvote", upVote);
-  AJS.$(document).on("click", ".downvote", downVote);
-
-  JIRA.ViewIssueTabs.onTabReady(function (in1, in2, in3) {
-    if (
-      "activitymodule" == in1.attr("id") ||
-      "activitymodule" == in1.parent().attr("id")
-    ) {
-      debug("Tab ready");
-      doAll();
-    }
-  });
-});
 
 var debug = function (msg) {
   //console.log(msg);
@@ -165,13 +184,13 @@ var formSubmit = function (formButton) {
 
         // close controls on rapidboards
         formButton
-          .parent()
-          .parent()
-          .parent()
-          .parent()
-          .parent()
-          .parent()
-          .toggle();
+            .parent()
+            .parent()
+            .parent()
+            .parent()
+            .parent()
+            .parent()
+            .toggle();
         formButton.closest(".issue-data-block").find(".commentreply").show();
       },
       error: function (xhr) {
@@ -205,11 +224,11 @@ var upVote = function (event) {
   event.preventDefault();
   AJS.$.ajax({
     url:
-      AJS.contextPath() +
-      "/rest/handlecomments/latest/hdata/upvote?commentid=" +
-      AJS.$(this).attr("commentid") +
-      "&issueid=" +
-      issueID,
+        AJS.contextPath() +
+        "/rest/handlecomments/latest/hdata/upvote?commentid=" +
+        AJS.$(this).attr("commentid") +
+        "&issueid=" +
+        issueID,
     success: function () {
       debug("Up voted");
       showCurrentVotes();
@@ -221,11 +240,11 @@ var downVote = function (event) {
   event.preventDefault();
   AJS.$.ajax({
     url:
-      AJS.contextPath() +
-      "/rest/handlecomments/latest/hdata/downvote?commentid=" +
-      AJS.$(this).attr("commentid") +
-      "&issueid=" +
-      issueID,
+        AJS.contextPath() +
+        "/rest/handlecomments/latest/hdata/downvote?commentid=" +
+        AJS.$(this).attr("commentid") +
+        "&issueid=" +
+        issueID,
     success: function () {
       debug("Down voted");
       showCurrentVotes();
@@ -240,39 +259,39 @@ var addCurrentVoteBlock = function () {
   debug("Checking block for comment - " + commentId);
 
   AJS.$(commentBlock)
-    .find(".action-links")
-    .each(function () {
-      //Add the current votes
-      var cmData = commentData["comment-" + commentId];
+      .find(".action-links")
+      .each(function () {
+        //Add the current votes
+        var cmData = commentData["comment-" + commentId];
 
-      if (cmData && cmData.downvotes) {
-        debug("Adding dislike block for comment - " + commentId);
-        var plu = cmData.downvotes > 1 ? "s" : "";
-        AJS.$(this).before(
-          AJS.$(
-            '<div class="description currentvotes dislikes">' +
-              cmData.downvotes +
-              " dislike" +
-              plu +
-              "</div>"
-          )
-        );
-      }
-      if (cmData && cmData.upvotes) {
-        debug("Adding like block for comment - " + commentId);
+        if (cmData && cmData.downvotes) {
+          debug("Adding dislike block for comment - " + commentId);
+          var plu = cmData.downvotes > 1 ? "s" : "";
+          AJS.$(this).before(
+              AJS.$(
+                  '<div class="description currentvotes dislikes">' +
+                  cmData.downvotes +
+                  " dislike" +
+                  plu +
+                  "</div>"
+              )
+          );
+        }
+        if (cmData && cmData.upvotes) {
+          debug("Adding like block for comment - " + commentId);
 
-        var plu = cmData.upvotes > 1 ? "s" : "";
-        AJS.$(this).before(
-          AJS.$(
-            '<div class="description currentvotes likes">' +
-              cmData.upvotes +
-              " like" +
-              plu +
-              "</div>"
-          )
-        );
-      }
-    });
+          var plu = cmData.upvotes > 1 ? "s" : "";
+          AJS.$(this).before(
+              AJS.$(
+                  '<div class="description currentvotes likes">' +
+                  cmData.upvotes +
+                  " like" +
+                  plu +
+                  "</div>"
+              )
+          );
+        }
+      });
 };
 
 var addCurrentVotes = function (data) {
@@ -298,10 +317,10 @@ var showCurrentVotes = function () {
   commentData = {};
 
   AJS.$.getJSON(
-    AJS.contextPath() +
+      AJS.contextPath() +
       "/rest/handlecomments/latest/hdata/commentsvotes?issueid=" +
       issueID,
-    addCurrentVotes
+      addCurrentVotes
   );
 };
 
@@ -338,22 +357,22 @@ var rearrangeComments = function () {
 
   //Load the relationships and then move comments around
   AJS.$.getJSON(
-    AJS.contextPath() +
+      AJS.contextPath() +
       "/rest/handlecomments/latest/hdata/commentdata?issueid=" +
       issueID,
-    function (data) {
-      AJS.$.each(data, function () {
-        debug(
-          "Current commentId = " +
-            this.commentid +
-            ", parentId = " +
-            this.parentcommentid
-        );
-        parents[this.commentid] = this.parentcommentid;
-      });
-      AJS.$("div[id|=comment][id!=comment-wiki-edit]").each(moveComment);
-      AJS.$("div[id|=comment][id!=comment-wiki-edit]").each(moveComment);
-    }
+      function (data) {
+        AJS.$.each(data, function () {
+          debug(
+              "Current commentId = " +
+              this.commentid +
+              ", parentId = " +
+              this.parentcommentid
+          );
+          parents[this.commentid] = this.parentcommentid;
+        });
+        AJS.$("div[id|=comment][id!=comment-wiki-edit]").each(moveComment);
+        AJS.$("div[id|=comment][id!=comment-wiki-edit]").each(moveComment);
+      }
   );
 };
 
@@ -361,84 +380,86 @@ function addCommentButtons() {
   debug("addCommentButtons called");
 
   if (!issueKey || issueKey == "") {
+    debug("addCommentButtons issueKey is empty: " + issueKey);
     return;
   }
+  debug("addCommentButtons issueKey is ok: " + issueKey);
 
   AJS.$.getJSON(
-    AJS.contextPath() +
+      AJS.contextPath() +
       "/rest/handlecomments/latest/hdata/configuration?issueId=" +
       JIRA.Issue.getIssueId(),
-    function (data) {
-      AJS.$("div[id|=comment][id!=comment-wiki-edit]").each(function () {
-        var commentId = AJS.$(this).attr("id").split("-")[1];
-        var commentUser = AJS.$(this).find(".action-details a").attr("rel");
-        var commentBlock = AJS.$(this).children()[0];
+      function (data) {
+        AJS.$("div[id|=comment][id!=comment-wiki-edit]").each(function () {
+          var commentId = AJS.$(this).attr("id").split("-")[1];
+          var commentUser = AJS.$(this).find(".action-details a").attr("rel");
+          var commentBlock = AJS.$(this).children()[0];
 
-        debug("Adding button for " + "," + commentId + "," + commentUser);
+          debug("Adding button for " + "," + commentId + "," + commentUser);
 
-        if (AJS.$(commentBlock).find(".commentreply").length == 0) {
-          debug("Adding reply block for commentId - " + commentId);
+          if (AJS.$(commentBlock).find(".commentreply").length == 0) {
+            debug("Adding reply block for commentId - " + commentId);
 
-          addCommentButtonsToBlock(
-            commentId,
-            commentBlock,
-            data.threadedEnabled,
-            data.editorHtml
-          );
-
-          //Add the vote buttons (only if the comment is from someone else)
-          if (loggedInUser != commentUser) {
-            AJS.$(commentBlock)
-              .find(".action-links")
-              .each(function () {
-                addVoteLinks.call(this, commentId, data.voteEnabled);
-              });
-          } else {
-            debug(
-              "Not adding like/dislike button for commentId = " + commentId
+            addCommentButtonsToBlock(
+                commentId,
+                commentBlock,
+                data.threadedEnabled,
+                data.editorHtml
             );
+
+            //Add the vote buttons (only if the comment is from someone else)
+            if (loggedInUser != commentUser) {
+              AJS.$(commentBlock)
+                  .find(".action-links")
+                  .each(function () {
+                    addVoteLinks.call(this, commentId, data.voteEnabled);
+                  });
+            } else {
+              debug(
+                  "Not adding like/dislike button for commentId = " + commentId
+              );
+            }
+          } else {
+            debug("Reply buttons already exist");
           }
-        } else {
-          debug("Reply buttons already exist");
-        }
-      });
-    }
+        });
+      }
   );
 }
 
 var addCommentButtonsToBlock = function (
-  commentId,
-  commentBlock,
-  threadedEnabled,
-  editorHtml
+    commentId,
+    commentBlock,
+    threadedEnabled,
+    editorHtml
 ) {
   debug("addCommentButtonsToBlock called");
   if (AJS.$(commentBlock).find(".commentreply").length !== 0) {
     return;
   }
   AJS.$(commentBlock).append(
-    JIRA.Templates.Plugins.ThreadedComments.replyCommentEditor({
-      threadedEnabled: threadedEnabled,
-      editorHtml: editorHtml,
-      commentId: commentId,
-    })
+      JIRA.Templates.Plugins.ThreadedComments.replyCommentEditor({
+        threadedEnabled: threadedEnabled,
+        editorHtml: editorHtml,
+        commentId: commentId,
+      })
   );
   AJS.$(commentBlock)
-    .find(".commentreplyform")
-    .on("submit", function (event) {
-      formSubmit(AJS.$(this).find(".replycommentbutton"));
-      event.preventDefault();
-    });
+      .find(".commentreplyform")
+      .on("submit", function (event) {
+        formSubmit(AJS.$(this).find(".replycommentbutton"));
+        event.preventDefault();
+      });
 };
 
 var addVoteLinks = function (commentId, voteEnabled) {
   debug("addVoteLinks called");
   AJS.$(this).append(
-    JIRA.Templates.Plugins.ThreadedComments.addVote({
-      voteEnabled: voteEnabled,
-      commentId: commentId,
-      contextPath: AJS.contextPath(),
-    })
+      JIRA.Templates.Plugins.ThreadedComments.addVote({
+        voteEnabled: voteEnabled,
+        commentId: commentId,
+        contextPath: AJS.contextPath(),
+      })
   );
 };
 
@@ -457,19 +478,3 @@ var handleIssueUpdated = function (e, context, reason) {
     doAll();
   }
 };
-
-AJS.toInit(function () {
-  JIRA.bind(JIRA.Events.NEW_CONTENT_ADDED, function (e, context, reason) {
-    if (
-      reason === JIRA.CONTENT_ADDED_REASON.panelRefreshed &&
-      context.is("#activitymodule")
-    ) {
-      handleIssueUpdated(e, context, reason);
-    }
-  });
-
-  if (typeof GH != "undefined" && typeof GH.DetailsView != "undefined") {
-    JIRA.bind("issueUpdated", handleIssueUpdated);
-    JIRA.bind(GH.DetailsView.API_EVENT_DETAIL_VIEW_UPDATED, handleIssueUpdated);
-  }
-});
